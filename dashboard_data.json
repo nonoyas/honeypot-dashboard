@@ -1,9 +1,9 @@
 {
-    "last_updated": "2025-06-18T07:40:15.810971",
+    "last_updated": "2025-06-18T08:47:33.038436",
     "daily_hits": [
         {
             "date": "2025-06-18",
-            "count": 13
+            "count": 14
         }
     ],
     "top_ips": [
@@ -14,9 +14,20 @@
         {
             "ip": "59.12.234.122",
             "count": 4
+        },
+        {
+            "ip": "59.12.234.114",
+            "count": 1
         }
     ],
     "all_logs": [
+        {
+            "ip": "59.12.234.114",
+            "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0",
+            "token": "sales_report_2024_Q2",
+            "timestamp": "2025-06-18T07:53:38.300236",
+            "accept_language": "ko,en;q=0.9,en-US;q=0.8"
+        },
         {
             "ip": "116.40.185.230",
             "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
