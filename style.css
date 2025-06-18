@@ -1,0 +1,104 @@
+/* style.css (honeypot-dashboard 저장소에 푸시) */
+body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f4f7f6;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+}
+
+.container {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 900px;
+    margin: 20px;
+}
+
+h1, h2 {
+    color: #0056b3;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.chart-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+/* D3.js 차트 스타일링 */
+.bar {
+    fill: steelblue;
+}
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: #ccc;
+    shape-rendering: crispEdges;
+}
+
+.axis text {
+    font-size: 10px;
+    fill: #666;
+}
+
+#top-ips-list {
+    list-style: none;
+    padding: 0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#top-ips-list li {
+    background-color: #eaf2f8;
+    margin-bottom: 8px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+}
+
+#top-ips-list li span {
+    color: #007bff;
+    font-size: 1.1em;
+}
+
+#all-logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+#all-logs-table th,
+#all-logs-table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+    font-size: 0.9em;
+}
+
+#all-logs-table th {
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+}
+
+#all-logs-table tbody tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+#all-logs-table tbody tr:hover {
+    background-color: #e9ecef;
+}
