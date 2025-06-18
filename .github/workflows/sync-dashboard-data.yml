@@ -34,6 +34,7 @@ jobs: # 워크플로우 내에서 실행될 하나 이상의 작업(job)을 정�
         # 이 스크립트는 Python으로 데이터를 처리하고 dashboard_data.json을 생성합니다.
         python -c "import requests; import json; from datetime import datetime, timedelta; import os; import sys;
 PYTHONANYWHERE_URL = os.environ.get('PYTHONANYWHERE_APP_URL') # 환경 변수에서 URL 가져오기
+
 if not PYTHONANYWHERE_URL:
     print('Error: PYTHONANYWHERE_APP_URL secret is not set.', file=sys.stderr)
     sys.exit(1)
