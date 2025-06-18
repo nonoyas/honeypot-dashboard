@@ -1,15 +1,15 @@
 {
-    "last_updated": "2025-06-18T11:37:12.016105",
+    "last_updated": "2025-06-18T13:07:03.666929",
     "daily_hits": [
         {
             "date": "2025-06-18",
-            "count": 14
+            "count": 16
         }
     ],
     "top_ips": [
         {
             "ip": "116.40.185.230",
-            "count": 9
+            "count": 11
         },
         {
             "ip": "59.12.234.122",
@@ -21,6 +21,20 @@
         }
     ],
     "all_logs": [
+        {
+            "ip": "116.40.185.230",
+            "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+            "token": "sales_report_2024_Q2",
+            "timestamp": "2025-06-18T12:52:33.030160",
+            "accept_language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7"
+        },
+        {
+            "ip": "116.40.185.230",
+            "user_agent": "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.2; Win64; x64; Trident/7.0; .NET4.0C; .NET4.0E; InfoPath.3; Tablet PC 2.0; Zoom 3.6.0; ms-office)",
+            "token": "sales_report_2024_Q2",
+            "timestamp": "2025-06-18T12:52:31.743703",
+            "accept_language": "none"
+        },
         {
             "ip": "59.12.234.114",
             "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0",
