@@ -1,0 +1,45 @@
+<!-- index.html (honeypot-dashboard 저장소에 푸시) -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HoneyPot Dashboard</title>
+    <!-- Inter 폰트를 사용하기 위해 Google Fonts 링크 추가 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>HoneyPot Dashboard</h1>
+        <p>마지막 업데이트: <span id="last-updated"></span></p>
+        <div class="chart-section">
+            <h2>일별 접근 횟수</h2>
+            <div id="daily-hits-chart"></div>
+        </div>
+        <div class="chart-section">
+            <h2>상위 10개 IP</h2>
+            <ul id="top-ips-list"></ul>
+        </div>
+        <div class="chart-section">
+            <h2>모든 로그</h2>
+            <table id="all-logs-table">
+                <thead>
+                    <tr>
+                        <th>IP</th>
+                        <th>User Agent</th>
+                        <th>Token</th>
+                        <th>Timestamp</th>
+                        <th>Accept-Language</th> <!-- 새 컬럼 헤더 추가 -->
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Logs will be inserted here by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
