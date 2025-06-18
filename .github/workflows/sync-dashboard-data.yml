@@ -28,82 +28,81 @@ jobs: # 워크플로우 내에서 실행될 하나 이상의 작업(job)을 정�
       env: # 환경 변수를 설정합니다.
         PYTHONANYWHERE_APP_URL: ${{ secrets.PYTHONANYWHERE_APP_URL }} # GitHub Secrets에 저장된 PythonAnywhere 앱의 URL을 환경 변수로 로드합니다.
                                                                    # 보안상 민감한 정보(API 키, URL 등)는 Secrets로 관리하는 것이 좋습니다.
-      run: | # 여러 줄의 Bash 명령어를 실행합니다.
-        # 이 부분에 Python 스크립트를 직접 작성합니다. (파일로 분리해도 되지만, 간단한 경우 직접 작성)
-        # PythonAnywhere Flask 앱의 /api/logs 엔드포인트에서 원본 로그 데이터를 가져옵니다.
-        # 이 스크립트는 Python으로 데이터를 처리하고 dashboard_data.json을 생성합니다.
+      run: | # `run: |`은 여러 줄의 Bash 명령어를 실행하겠다는 의미입니다.
+        # 이 아래부터는 파이썬 스크립트 코드입니다.
+        # 중요한 것은, 이 파이썬 스크립트 자체 내의 들여쓰기가 파이썬 문법을 따라야 한다는 것입니다.
+        # 그리고 이 스크립트가 YAML의 `run:` 바로 아래에 위치하므로, 해당 `run:`에 대한 들여쓰기를 따라야 합니다.
         python -c "import requests; import json; from datetime import datetime, timedelta; import os; import sys;
-PYTHONANYWHERE_URL = os.environ.get('PYTHONANYWHERE_APP_URL') # 환경 변수에서 URL 가져오기
 
-if not PYTHONANYWHERE_URL:
-    print('Error: PYTHONANYWHERE_APP_URL secret is not set.', file=sys.stderr)
-    sys.exit(1)
+        PYTHONANYWHERE_URL = os.environ.get('PYTHONANYWHERE_APP_URL') # 환경 변수에서 URL 가져오기
+        if not PYTHONANYWHERE_URL:
+            print('Error: PYTHONANYWHERE_APP_URL secret is not set.', file=sys.stderr)
+            sys.exit(1)
 
-log_api_url = f'{PYTHONANYWHERE_URL}/api/logs'
-print(f'Attempting to fetch logs from: {log_api_url}', file=sys.stderr)
+        log_api_url = f'{PYTHONANYWHERE_URL}/api/logs'
+        print(f'Attempting to fetch logs from: {log_api_url}', file=sys.stderr)
 
-try:
-    response = requests.get(log_api_url)
-    response.raise_for_status() # HTTP 오류(4xx, 5xx)가 발생하면 예외를 발생시킵니다.
-    raw_logs = response.json() # 응답을 JSON으로 파싱합니다.
-    print(f'Successfully fetched {len(raw_logs)} raw logs.', file=sys.stderr)
-except requests.exceptions.RequestException as e: # requests 라이브러리 관련 예외 처리
-    print(f'Error fetching logs: {e}', file=sys.stderr)
-    sys.exit(1) # 오류 발생 시 워크플로우 실패로 종료합니다.
+        try:
+            response = requests.get(log_api_url)
+            response.raise_for_status() # HTTP 오류(4xx, 5xx)가 발생하면 예외를 발생시킵니다.
+            raw_logs = response.json() # 응답을 JSON으로 파싱합니다.
+            print(f'Successfully fetched {len(raw_logs)} raw logs.', file=sys.stderr)
+        except requests.exceptions.RequestException as e: # requests 라이브러리 관련 예외 처리
+            print(f'Error fetching logs: {e}', file=sys.stderr)
+            sys.exit(1) # 오류 발생 시 워크플로우 실패로 종료합니다.
 
-# JSON 변환 스크립트의 로직 (PythonAnywhere의 transform_logs_to_json.py 핵심 로직과 동일)
+        # JSON 변환 스크립트의 로직 (PythonAnywhere의 transform_logs_to_json.py 핵심 로직과 동일)
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=7) # 최근 7일 로그 필터링 기준 (선택 사항)
 
-end_date = datetime.utcnow()
-start_date = end_date - timedelta(days=7) # 최근 7일 로그 필터링 기준 (선택 사항)
+        daily_hits = {}
+        ip_counts = {}
+        filtered_logs = []
 
-daily_hits = {}
-ip_counts = {}
-filtered_logs = []
+        for log in raw_logs:
+            try:
+                if 'timestamp' not in log: # 타임스탬프 필드가 없는 로그 건너뛰기
+                    print(f'Skipping log due to missing timestamp: {log}', file=sys.stderr)
+                    continue
+                log_datetime = datetime.fromisoformat(log['timestamp'])
 
-for log in raw_logs:
-    try:
-        if 'timestamp' not in log: # 타임스탬프 필드가 없는 로그 건너뛰기
-            print(f'Skipping log due to missing timestamp: {log}', file=sys.stderr)
-            continue
-        log_datetime = datetime.fromisoformat(log['timestamp'])
-        
-        # 필터링: GitHub Actions에서는 전체 데이터를 가져와 처리할 수 있으므로, 굳이 7일 필터링을 강제하지 않을 수 있습니다.
-        # if start_date <= log_datetime <= end_date: # 만약 7일 필터링을 원한다면 이 주석을 해제하고 들여쓰기를 맞춥니다.
-        
-        log_date = log_datetime.date()
-        date_str = log_date.isoformat()
+                # 필터링: GitHub Actions에서는 전체 데이터를 가져와 처리할 수 있으므로, 굳이 7일 필터링을 강제하지 않을 수 있습니다.
+                # if start_date <= log_datetime <= end_date: # 만약 7일 필터링을 원한다면 이 주석을 해제하고 들여쓰기를 맞춥니다.
 
-        daily_hits[date_str] = daily_hits.get(date_str, 0) + 1
-        ip_counts[log.get('ip', 'unknown')] = ip_counts.get(log.get('ip', 'unknown'), 0) + 1
-        filtered_logs.append({ # 대시보드에 표시될 형식으로 데이터 추가
-            'ip': log.get('ip', 'unknown'),
-            'user_agent': log.get('user_agent', 'unknown'),
-            'token': log.get('token', 'unknown'),
-            'timestamp': log.get('timestamp', ''),
-            'accept_language': log.get('accept_language', 'N/A') # 새 컬럼 추가
-        })
-    except ValueError as ve: # 타임스탬프 형식 오류 처리
-        print(f'Skipping log due to invalid timestamp format: {log.get("timestamp")}, Error: {ve}', file=sys.stderr)
-        continue
-    except KeyError as ke: # 필수 키(필드) 누락 오류 처리
-        print(f'Skipping log due to missing key: {ke} in log: {log}', file=sys.stderr)
-        continue
+                log_date = log_datetime.date()
+                date_str = log_date.isoformat()
 
-sorted_ips = sorted(ip_counts.items(), key=lambda item: item[1], reverse=True)[:10] # 상위 10개 IP 정렬
-top_ips = [{'ip': ip, 'count': count} for ip, count in sorted_ips]
+                daily_hits[date_str] = daily_hits.get(date_str, 0) + 1
+                ip_counts[log.get('ip', 'unknown')] = ip_counts.get(log.get('ip', 'unknown'), 0) + 1
+                filtered_logs.append({ # 대시보드에 표시될 형식으로 데이터 추가
+                    'ip': log.get('ip', 'unknown'),
+                    'user_agent': log.get('user_agent', 'unknown'),
+                    'token': log.get('token', 'unknown'),
+                    'timestamp': log.get('timestamp', ''),
+                    'accept_language': log.get('accept_language', 'N/A') # 새 컬럼 추가
+                })
+            except ValueError as ve: # 타임스탬프 형식 오류 처리
+                print(f'Skipping log due to invalid timestamp format: {log.get("timestamp")}, Error: {ve}', file=sys.stderr)
+                continue
+            except KeyError as ke: # 필수 키(필드) 누락 오류 처리
+                print(f'Skipping log due to missing key: {ke} in log: {log}', file=sys.stderr)
+                continue
 
-dashboard_data = { # 최종 JSON 데이터 구조
-    'last_updated': datetime.utcnow().isoformat(),
-    'daily_hits': [{'date': date, 'count': count} for date, count in sorted(daily_hits.items())],
-    'top_ips': top_ips,
-    'all_logs': filtered_logs
-}
+        sorted_ips = sorted(ip_counts.items(), key=lambda item: item[1], reverse=True)[:10] # 상위 10개 IP 정렬
+        top_ips = [{'ip': ip, 'count': count} for ip, count in sorted_ips]
 
-with open('dashboard_data.json', 'w', encoding='utf-8') as f: # dashboard_data.json 파일로 저장
-    json.dump(dashboard_data, f, ensure_ascii=False, indent=4)
+        dashboard_data = { # 최종 JSON 데이터 구조
+            'last_updated': datetime.utcnow().isoformat(),
+            'daily_hits': [{'date': date, 'count': count} for date, count in sorted(daily_hits.items())],
+            'top_ips': top_ips,
+            'all_logs': filtered_logs
+        }
 
-print('Dashboard data generated successfully by GitHub Actions.', file=sys.stderr)
-        "
+        with open('dashboard_data.json', 'w', encoding='utf-8') as f: # dashboard_data.json 파일로 저장
+            json.dump(dashboard_data, f, ensure_ascii=False, indent=4)
+
+        print('Dashboard data generated successfully by GitHub Actions.', file=sys.stderr)
+        " # <-- 여기에 큰따옴표가 정확히 닫혀야 합니다.
 
     - name: Commit and push dashboard data # 다섯 번째 단계: 변경된 JSON 파일을 Git 저장소에 커밋하고 푸시합니다.
       run: |
