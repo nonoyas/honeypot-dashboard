@@ -1,0 +1,119 @@
+# .github/workflows/sync-dashboard-data.yml (honeypot-dashboard 저장소에 생성)
+name: Sync Honeypot Dashboard Data # 워크플로우의 이름. GitHub Actions 탭에 이 이름으로 표시됩니다.
+
+on: # 이 워크플로우가 언제 실행될지 정의합니다.
+  schedule: # 주기적으로 실행되도록 예약합니다.
+    - cron: '30 * * * *' # 크론 표현식으로 매시간 30분마다 실행되도록 설정합니다.
+                         # (예: '0 */6 * * *'는 6시간마다 실행, '0 0 * * *'는 매일 자정에 실행)
+                         # PythonAnywhere Scheduled Task 시간과 겹치지 않게 조절하여 API 호출 부하를 분산할 수 있습니다.
+  workflow_dispatch: # GitHub Actions 탭에서 'Run workflow' 버튼을 클릭하여 워크플로우를 수동으로 실행할 수 있도록 허용합니다.
+
+jobs: # 워크플로우 내에서 실행될 하나 이상의 작업(job)을 정의합니다.
+  update-dashboard-data: # 작업의 고유 이름
+    runs-on: ubuntu-latest # 이 작업이 실행될 가상 환경을 지정합니다. 여기서는 최신 Ubuntu 리눅스 환경을 사용합니다.
+    steps: # 작업 내에서 순차적으로 실행될 단계(step)들을 정의합니다.
+
+    - name: Checkout dashboard repository # 첫 번째 단계: GitHub 저장소 코드를 가상 환경으로 가져옵니다.
+      uses: actions/checkout@v3 # GitHub에서 제공하는 'checkout' 액션을 사용합니다.
+
+    - name: Set up Python environment # 두 번째 단계: Python 환경을 설정합니다.
+      uses: actions/setup-python@v4 # GitHub에서 제공하는 'setup-python' 액션을 사용합니다.
+      with:
+        python-version: '3.9' # Flask 앱의 Python 버전과 호환되는 버전을 지정합니다.
+
+    - name: Install dependencies # 세 번째 단계: Python 스크립트 실행에 필요한 라이브러리(requests)를 설치합니다.
+      run: pip install requests # 'requests' 라이브러리는 PythonAnywhere API에 HTTP 요청을 보내는 데 사용됩니다.
+
+    - name: Fetch and Process Logs from PythonAnywhere Flask App # 네 번째 단계: PythonAnywhere에서 로그 데이터를 가져오고 처리합니다.
+      env: # 환경 변수를 설정합니다.
+        PYTHONANYWHERE_APP_URL: ${{ secrets.PYTHONANYWHERE_APP_URL }} # GitHub Secrets에 저장된 PythonAnywhere 앱의 URL을 환경 변수로 로드합니다.
+                                                                   # 보안상 민감한 정보(API 키, URL 등)는 Secrets로 관리하는 것이 좋습니다.
+      run: | # 여러 줄의 Bash 명령어를 실행합니다.
+        # 이 부분에 Python 스크립트를 직접 작성합니다. (파일로 분리해도 되지만, 간단한 경우 직접 작성)
+        # PythonAnywhere Flask 앱의 /api/logs 엔드포인트에서 원본 로그 데이터를 가져옵니다.
+        # 이 스크립트는 Python으로 데이터를 처리하고 dashboard_data.json을 생성합니다.
+        python -c "
+import requests
+import json
+from datetime import datetime, timedelta
+import os # os 모듈 추가
+import sys # sys 모듈 추가
+
+PYTHONANYWHERE_URL = os.environ.get('PYTHONANYWHERE_APP_URL') # 환경 변수에서 URL 가져오기
+if not PYTHONANYWHERE_URL:
+    print('Error: PYTHONANYWHERE_APP_URL secret is not set.', file=sys.stderr)
+    sys.exit(1)
+
+log_api_url = f'{PYTHONANYWHERE_URL}/api/logs'
+print(f'Attempting to fetch logs from: {log_api_url}', file=sys.stderr)
+
+try:
+    response = requests.get(log_api_url)
+    response.raise_for_status() # HTTP 오류(4xx, 5xx)가 발생하면 예외를 발생시킵니다.
+    raw_logs = response.json() # 응답을 JSON으로 파싱합니다.
+    print(f'Successfully fetched {len(raw_logs)} raw logs.', file=sys.stderr)
+except requests.exceptions.RequestException as e: # requests 라이브러리 관련 예외 처리
+    print(f'Error fetching logs: {e}', file=sys.stderr)
+    sys.exit(1) # 오류 발생 시 워크플로우 실패로 종료합니다.
+
+# JSON 변환 스크립트의 로직 (PythonAnywhere의 transform_logs_to_json.py 핵심 로직과 동일)
+
+end_date = datetime.utcnow()
+start_date = end_date - timedelta(days=7) # 최근 7일 로그 필터링 기준 (선택 사항)
+
+daily_hits = {}
+ip_counts = {}
+filtered_logs = []
+
+for log in raw_logs:
+    try:
+        if 'timestamp' not in log: # 타임스탬프 필드가 없는 로그 건너뛰기
+            print(f'Skipping log due to missing timestamp: {log}', file=sys.stderr)
+            continue
+        log_datetime = datetime.fromisoformat(log['timestamp'])
+        
+        # 필터링: GitHub Actions에서는 전체 데이터를 가져와 처리할 수 있으므로, 굳이 7일 필터링을 강제하지 않을 수 있습니다.
+        # if start_date <= log_datetime <= end_date: # 만약 7일 필터링을 원한다면 이 주석을 해제하고 들여쓰기를 맞춥니다.
+        
+        log_date = log_datetime.date()
+        date_str = log_date.isoformat()
+
+        daily_hits[date_str] = daily_hits.get(date_str, 0) + 1
+        ip_counts[log.get('ip', 'unknown')] = ip_counts.get(log.get('ip', 'unknown'), 0) + 1
+        filtered_logs.append({ # 대시보드에 표시될 형식으로 데이터 추가
+            'ip': log.get('ip', 'unknown'),
+            'user_agent': log.get('user_agent', 'unknown'),
+            'token': log.get('token', 'unknown'),
+            'timestamp': log.get('timestamp', ''),
+            'accept_language': log.get('accept_language', 'N/A') # 새 컬럼 추가
+        })
+    except ValueError as ve: # 타임스탬프 형식 오류 처리
+        print(f'Skipping log due to invalid timestamp format: {log.get("timestamp")}, Error: {ve}', file=sys.stderr)
+        continue
+    except KeyError as ke: # 필수 키(필드) 누락 오류 처리
+        print(f'Skipping log due to missing key: {ke} in log: {log}', file=sys.stderr)
+        continue
+
+sorted_ips = sorted(ip_counts.items(), key=lambda item: item[1], reverse=True)[:10] # 상위 10개 IP 정렬
+top_ips = [{'ip': ip, 'count': count} for ip, count in sorted_ips]
+
+dashboard_data = { # 최종 JSON 데이터 구조
+    'last_updated': datetime.utcnow().isoformat(),
+    'daily_hits': [{'date': date, 'count': count} for date, count in sorted(daily_hits.items())],
+    'top_ips': top_ips,
+    'all_logs': filtered_logs
+}
+
+with open('dashboard_data.json', 'w', encoding='utf-8') as f: # dashboard_data.json 파일로 저장
+    json.dump(dashboard_data, f, ensure_ascii=False, indent=4)
+
+print('Dashboard data generated successfully by GitHub Actions.', file=sys.stderr)
+        "
+
+    - name: Commit and push dashboard data # 다섯 번째 단계: 변경된 JSON 파일을 Git 저장소에 커밋하고 푸시합니다.
+      run: |
+        git config user.name "github-actions[bot]" # Git 커밋 사용자 이름 설정 (GitHub Actions 봇)
+        git config user.email "github-actions[bot]@users.noreply.github.com" # Git 커밋 이메일 설정
+        git add dashboard_data.json # 변경된 dashboard_data.json 파일을 Git 스테이징 영역에 추가
+        git diff-index --quiet HEAD || git commit -m "Update honeypot dashboard data from PythonAnywhere" # 변경 사항이 있을 경우에만 커밋
+        git push # GitHub 저장소로 푸시
