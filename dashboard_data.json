@@ -1,0 +1,24 @@
+{
+    "last_updated": "2025-06-18T07:04:06.358631",
+    "daily_hits": [
+        {
+            "date": "2025-06-18",
+            "count": 1
+        }
+    ],
+    "top_ips": [
+        {
+            "ip": "116.40.185.230",
+            "count": 1
+        }
+    ],
+    "all_logs": [
+        {
+            "ip": "116.40.185.230",
+            "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+            "token": "123456789",
+            "timestamp": "2025-06-18T05:23:44.039858",
+            "accept_language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7"
+        }
+    ]
+}
