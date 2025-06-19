@@ -77,7 +77,10 @@
             align-items: center;
             border: 1px solid var(--border-color); /* 테두리 추가 */
             transition: transform 0.2s ease, box-shadow 0.2s ease; /* 호버 효과 */
-            min-height: 250px; /* 차트 카드도 최소 높이 유지 (차트 없을 때 빈 공간 대비) */
+            
+            /* 여기를 수정: 차트 카드의 명시적인 높이와 오버플로우 숨김 */
+            height: 350px; /* 고정 높이 설정 */
+            overflow: hidden; /* 내용이 넘치면 숨김 */
             position: relative; /* 자식 요소 (데이터 없음 메시지) 위치 지정을 위해 */
         }
 
@@ -105,7 +108,7 @@
 
         canvas {
             max-width: 100%;
-            height: auto; /* Chart.js에서 높이 조절 */
+            height: 100%; /* 캔버스가 부모 높이를 채우도록 */
             display: block;
             margin: 0 auto;
         }
@@ -157,8 +160,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            /* margin-top은 .log-table-container에서 관리하므로 여기서 제거 */
-            margin-top: 0;
+            margin-top: 0; /* 컨테이너 내에서 마진 제거 */
         }
 
         th, td {
@@ -232,7 +234,7 @@
                 const chartCanvas = document.getElementById(canvasId);
                 const parentCard = chartCanvas.closest('.chart-card');
                 if (parentCard) {
-                    // 기존 캔버스를 숨기거나 제거
+                    // 기존 캔버스를 숨김
                     chartCanvas.style.display = 'none';
                     // 기존 메시지가 있으면 제거
                     const existingMessage = parentCard.querySelector('.no-data-message');
@@ -272,37 +274,39 @@
                     totalHitsElement.textContent = data.total_hits;
 
                     // User Agents Chart (Pie Chart)
-                    if (data.user_agents && data.user_agents.length > 0) {
+                    // 유의미한 데이터가 1개 이상일 때만 차트 표시
+                    if (data.user_agents && data.user_agents.length > 0 && data.user_agents.some(item => item.count > 0)) {
                         showChartCanvas('userAgentsChart');
                         const uaLabels = data.user_agents.map(item => item.categorized_ua);
                         const uaCounts = data.user_agents.map(item => item.count);
                         renderPieChart('userAgentsChart', uaLabels, uaCounts, 'Top User Agents');
                     } else {
                         showNoDataMessage('userAgentsChart', 'No User Agent data available.');
-                        if (userAgentsChart) userAgentsChart.destroy(); // 기존 차트가 있으면 파괴
+                        if (userAgentsChart) userAgentsChart.destroy();
                     }
 
 
                     // Hits Over Time Chart (Line Chart)
-                    if (data.hits_over_time && data.hits_over_time.length > 0) {
+                    // 유의미한 데이터가 1개 이상일 때만 차트 표시
+                    if (data.hits_over_time && data.hits_over_time.length > 0 && data.hits_over_time.some(item => item.count > 0)) {
                         showChartCanvas('hitsOverTimeChart');
                         const timeLabels = data.hits_over_time.map(item => item.access_date);
                         const timeCounts = data.hits_over_time.map(item => item.count);
                         renderLineChart('hitsOverTimeChart', timeLabels, timeCounts, 'Daily Hits Over Time');
                     } else {
                         showNoDataMessage('hitsOverTimeChart', 'No Hits Over Time data available.');
-                        if (hitsOverTimeChart) hitsOverTimeChart.destroy(); // 기존 차트가 있으면 파괴
+                        if (hitsOverTimeChart) hitsOverTimeChart.destroy();
                     }
 
 
                     // Hits by Token Chart (Bar Chart)
-                    if (data.hits_by_token && data.hits_by_token.length > 0) {
+                    // 유의미한 데이터가 1개 이상일 때만 차트 표시
+                    if (data.hits_by_token && data.hits_by_token.length > 0 && data.hits_by_token.some(item => item.count > 0)) {
                         showChartCanvas('hitsByTokenChart');
-                        const topTokens = data.hits_by_token.slice(0, 10); // 상위 10개만 슬라이스
+                        const topTokens = data.hits_by_token.slice(0, 10);
                         const tokenLabels = topTokens.map(item => item.token);
                         const tokenCounts = topTokens.map(item => item.count);
 
-                        // 만약 상위 10개 외의 토큰이 있다면 'Others'로 묶어 추가
                         if (data.hits_by_token.length > 10) {
                             const otherCount = data.hits_by_token.slice(10).reduce((sum, item) => sum + item.count, 0);
                             tokenLabels.push('Others');
@@ -311,12 +315,21 @@
                         renderBarChart('hitsByTokenChart', tokenLabels, tokenCounts, 'Top 10 Hits by Token Distribution');
                     } else {
                         showNoDataMessage('hitsByTokenChart', 'No Token data available.');
-                        if (hitsByTokenChart) hitsByTokenChart.destroy(); // 기존 차트가 있으면 파괴
+                        if (hitsByTokenChart) hitsByTokenChart.destroy();
                     }
 
                 } catch (error) {
                     console.error('Error fetching dashboard data:', error);
                     totalHitsElement.textContent = 'Error';
+                    // 에러 발생 시 모든 차트에 메시지 표시
+                    showNoDataMessage('userAgentsChart', 'Error loading data.');
+                    showNoDataMessage('hitsOverTimeChart', 'Error loading data.');
+                    showNoDataMessage('hitsByTokenChart', 'Error loading data.');
+                    // 기존 차트 인스턴스 파괴
+                    if (userAgentsChart) userAgentsChart.destroy();
+                    if (hitsOverTimeChart) hitsOverTimeChart.destroy();
+                    if (hitsByTokenChart) hitsByTokenChart.destroy();
+
                     document.querySelector('.dashboard-container').innerHTML = `<p class="error">Failed to load dashboard data. Error: ${error.message}. Please check server logs.</p>`;
                 }
             }
@@ -324,7 +337,6 @@
             // 상세 로그 데이터 가져오기 및 렌더링
             async function fetchDetailedLogs() {
                 const logsContainer = document.getElementById('logs-container');
-                // 컨테이너 초기화 시 로딩 메시지를 표시
                 logsContainer.innerHTML = '<p class="loading">Loading detailed logs...</p>';
 
                 try {
@@ -339,7 +351,6 @@
                         return;
                     }
 
-                    // 테이블을 새로운 div로 감싸서 scroll-container 역할을 하도록 변경
                     let tableHTML = '<table>';
                     tableHTML += '<thead><tr><th>IP Address</th><th>User Agent</th><th>Token</th><th>Timestamp</th><th>Accept-Language</th></tr></thead>';
                     tableHTML += '<tbody>';
@@ -357,7 +368,7 @@
                     });
 
                     tableHTML += '</tbody></table>';
-                    logsContainer.innerHTML = tableHTML; // logsContainer 자체가 스크롤 컨테이너 역할을 함
+                    logsContainer.innerHTML = tableHTML;
 
                 } catch (error) {
                     console.error('Error fetching detailed logs:', error);
@@ -365,48 +376,40 @@
                 }
             }
 
-            // --- Chart.js 렌더링 함수들 ---
+            // --- Chart.js 렌더링 함수들 (옵션에 height: 100% 반영) ---
             function renderPieChart(canvasId, labels, data, title) {
                 const ctx = document.getElementById(canvasId).getContext('2d');
-                if (userAgentsChart) userAgentsChart.destroy(); // 기존 차트가 있으면 파괴 (안전장치)
+                if (userAgentsChart) userAgentsChart.destroy();
                 userAgentsChart = new Chart(ctx, {
                     type: 'pie',
                     data: {
                         labels: labels,
                         datasets: [{
                             data: data,
-                            backgroundColor: [ // 어두운 배경에 어울리는 색상 팔레트
+                            backgroundColor: [
                                 '#e94560', '#0f4c75', '#a32a9e', '#00bcd4', '#ff8c00', '#6a0dad', '#ffd700', '#20b2aa', '#7b68ee', '#f08080'
                             ],
-                            borderColor: '#1a1a2e', // 차트 경계선은 배경색과 유사하게
-                            borderWidth: 2 // 경계선 두께
+                            borderColor: '#1a1a2e',
+                            borderWidth: 2
                         }]
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false, // 캔버스 크기 제어를 용이하게 함
+                        maintainAspectRatio: false, // 부모 컨테이너의 크기에 맞춰짐
                         plugins: {
-                            legend: { // 범례 (라벨) 설정
-                                position: 'right', // 범례를 오른쪽에 배치
+                            legend: {
+                                position: 'right',
                                 labels: {
-                                    color: 'var(--chart-label-color)', // 레이블 텍스트 색상
-                                    font: {
-                                        size: 12 // 범례 텍스트 크기 조정
-                                    }
+                                    color: 'var(--chart-label-color)',
+                                    font: { size: 12 }
                                 }
                             },
                             title: {
                                 display: true,
-                                text: title, // 차트 제목
-                                color: 'var(--text-color)', // 차트 제목 색상
-                                font: {
-                                    size: 16, // 차트 제목 크기
-                                    weight: 'bold'
-                                },
-                                padding: { // 제목과 차트 사이 간격
-                                    top: 10,
-                                    bottom: 15
-                                }
+                                text: title,
+                                color: 'var(--text-color)',
+                                font: { size: 16, weight: 'bold' },
+                                padding: { top: 10, bottom: 15 }
                             }
                         }
                     }
@@ -415,7 +418,7 @@
 
             function renderLineChart(canvasId, labels, data, title) {
                 const ctx = document.getElementById(canvasId).getContext('2d');
-                if (hitsOverTimeChart) hitsOverTimeChart.destroy(); // 기존 차트 파괴 (안전장치)
+                if (hitsOverTimeChart) hitsOverTimeChart.destroy();
                 hitsOverTimeChart = new Chart(ctx, {
                     type: 'line',
                     data: {
@@ -423,72 +426,36 @@
                         datasets: [{
                             label: 'Hits',
                             data: data,
-                            borderColor: '#00bcd4', // 라인 색상
-                            backgroundColor: 'rgba(0, 188, 212, 0.2)', // 배경 채우기 색상
+                            borderColor: '#00bcd4',
+                            backgroundColor: 'rgba(0, 188, 212, 0.2)',
                             fill: true,
-                            tension: 0.3 // 라인 부드럽게
+                            tension: 0.3
                         }]
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false,
+                        maintainAspectRatio: false, // 부모 컨테이너의 크기에 맞춰짐
                         plugins: {
                             legend: { display: false },
                             title: {
                                 display: true,
                                 text: title,
                                 color: 'var(--text-color)',
-                                font: {
-                                    size: 16,
-                                    weight: 'bold'
-                                },
-                                padding: {
-                                    top: 10,
-                                    bottom: 15
-                                }
+                                font: { size: 16, weight: 'bold' },
+                                padding: { top: 10, bottom: 15 }
                             }
                         },
                         scales: {
                             x: {
-                                title: {
-                                    display: true,
-                                    text: 'Date',
-                                    color: 'var(--chart-label-color)', // X축 제목 색상
-                                    font: {
-                                        size: 14, // X축 제목 크기
-                                        weight: 'bold'
-                                    }
-                                },
-                                ticks: {
-                                    color: 'var(--chart-label-color)', // X축 레이블 색상
-                                    font: {
-                                        size: 10 // X축 레이블 크기
-                                    }
-                                },
-                                grid: {
-                                    color: 'var(--chart-grid-color)' // 그리드 라인 색상
-                                }
+                                title: { display: true, text: 'Date', color: 'var(--chart-label-color)', font: { size: 14, weight: 'bold' } },
+                                ticks: { color: 'var(--chart-label-color)', font: { size: 10 } },
+                                grid: { color: 'var(--chart-grid-color)' }
                             },
                             y: {
                                 beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Number of Hits',
-                                    color: 'var(--chart-label-color)', // Y축 제목 색상
-                                    font: {
-                                        size: 14, // Y축 제목 크기
-                                        weight: 'bold'
-                                    }
-                                },
-                                ticks: {
-                                    color: 'var(--chart-label-color)', // Y축 레이블 색상
-                                    font: {
-                                        size: 10 // Y축 레이블 크기
-                                    }
-                                },
-                                grid: {
-                                    color: 'var(--chart-grid-color)'
-                                }
+                                title: { display: true, text: 'Number of Hits', color: 'var(--chart-label-color)', font: { size: 14, weight: 'bold' } },
+                                ticks: { color: 'var(--chart-label-color)', font: { size: 10 } },
+                                grid: { color: 'var(--chart-grid-color)' }
                             }
                         }
                     }
@@ -497,7 +464,7 @@
 
             function renderBarChart(canvasId, labels, data, title) {
                 const ctx = document.getElementById(canvasId).getContext('2d');
-                if (hitsByTokenChart) hitsByTokenChart.destroy(); // 기존 차트 파괴 (안전장치)
+                if (hitsByTokenChart) hitsByTokenChart.destroy();
                 hitsByTokenChart = new Chart(ctx, {
                     type: 'bar',
                     data: {
@@ -505,71 +472,40 @@
                         datasets: [{
                             label: 'Hits',
                             data: data,
-                            backgroundColor: '#e94560', // 바 색상
+                            backgroundColor: '#e94560',
                             borderColor: '#e94560',
                             borderWidth: 1
                         }]
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false,
+                        maintainAspectRatio: false, // 부모 컨테이너의 크기에 맞춰짐
                         plugins: {
                             legend: { display: false },
                             title: {
                                 display: true,
                                 text: title,
                                 color: 'var(--text-color)',
-                                font: {
-                                    size: 16,
-                                    weight: 'bold'
-                                },
-                                padding: {
-                                    top: 10,
-                                    bottom: 15
-                                }
+                                font: { size: 16, weight: 'bold' },
+                                padding: { top: 10, bottom: 15 }
                             }
                         },
                         scales: {
                             x: {
-                                title: {
-                                    display: true,
-                                    text: 'Token',
-                                    color: 'var(--chart-label-color)',
-                                    font: {
-                                        size: 14, // X축 제목 크기
-                                        weight: 'bold'
-                                    }
-                                },
+                                title: { display: true, text: 'Token', color: 'var(--chart-label-color)', font: { size: 14, weight: 'bold' } },
                                 ticks: {
                                     color: 'var(--chart-label-color)',
-                                    font: {
-                                        size: 10 // X축 레이블 (토큰 이름) 크기
-                                    },
-                                    autoSkip: false, // 모든 라벨 표시 시도 (라벨이 많으면 겹칠 수 있음)
-                                    maxRotation: 45, // 라벨 기울기 (겹침 방지)
+                                    font: { size: 10 },
+                                    autoSkip: false,
+                                    maxRotation: 45,
                                     minRotation: 0
                                 }
                             },
                             y: {
                                 beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Number of Hits',
-                                    color: 'var(--chart-label-color)',
-                                    font: {
-                                        size: 14, // Y축 제목 크기
-                                        weight: 'bold'
-                                    }
-                                },
-                                ticks: {
-                                    color: 'var(--chart-label-color)',
-                                    font: {
-                                        size: 10 // Y축 레이블 크기
-                                    }
-                                },
-                                grid: {
-                                    color: 'var(--chart-grid-color)'
-                                }
+                                title: { display: true, text: 'Number of Hits', color: 'var(--chart-label-color)', font: { size: 14, weight: 'bold' } },
+                                ticks: { color: 'var(--chart-label-color)', font: { size: 10 } },
+                                grid: { color: 'var(--chart-grid-color)' }
                             }
                         }
                     }
