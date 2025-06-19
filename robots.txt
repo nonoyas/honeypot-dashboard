@@ -1,2 +1,2 @@
 User-agent: *
-Disallow: /secret-path/honey.gif?token=sales_report_2024_Q2
+Disallow: /honey.gif
