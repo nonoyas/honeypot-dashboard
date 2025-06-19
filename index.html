@@ -3,45 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Honeypot Access Logs</title>
+    <title>Honeypot Dashboard - Bot Insight</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
-        h1 { color: #0056b3; }
-        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; line-height: 1.6; }
+        h1, h2 { color: #0056b3; text-align: center; margin-bottom: 25px;}
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* 반응형 그리드 */
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .card {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        .card h3 { color: #333; margin-top: 0; }
+        .card p { font-size: 2.5em; font-weight: bold; color: #007bff; margin-bottom: 0; }
+        canvas { max-width: 100%; height: auto; }
+        .chart-card {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .error, .loading { text-align: center; margin-top: 20px; font-weight: bold; }
+        .error { color: red; }
+        .current-logs-section {
+            margin-top: 40px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
-        .error { color: red; font-weight: bold; }
-        .loading { text-align: center; margin-20px; color: #666; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Honeypot Access Logs</h1>
-        <p>This page displays access logs from the honeypot. Data is fetched from a PythonAnywhere API.</p>
+    <h1>Honeypot Bot Traffic Dashboard</h1>
+    <h2>Insights into Automated Access</h2>
+    <div class="dashboard-container">
+        <div class="card">
+            <h3>Total Bot Hits</h3>
+            <p id="totalHits">Loading...</p>
+        </div>
+        <div class="chart-card">
+            <h3>Top User Agents</h3>
+            <canvas id="userAgentsChart"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>Hits Over Time</h3>
+            <canvas id="hitsOverTimeChart"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>Hits by Token</h3>
+            <canvas id="hitsByTokenChart"></canvas>
+        </div>
+    </div>
+
+    <div class="current-logs-section">
+        <h2>Recent Access Logs (Detailed)</h2>
         <div id="logs-container">
-            <p class="loading">Loading logs...</p>
+            <p class="loading">Loading detailed logs...</p>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const logsContainer = document.getElementById('logs-container');
-            const API_URL = 'https://nonoyas.pythonanywhere.com/api/logs'; // <-- 본인의 PythonAnywhere API 주소!
+            const API_DASHBOARD_URL = 'https://nonoyas.pythonanywhere.com/api/dashboard'; // 본인의 대시보드 API 주소
+            const API_LOGS_URL = 'https://nonoyas.pythonanywhere.com/api/logs';       // 본인의 상세 로그 API 주소
 
-            // 1. 데이터 가져오기 함수
-            async function fetchLogs() {
+            // 차트 인스턴스 저장용 변수
+            let userAgentsChart = null;
+            let hitsOverTimeChart = null;
+            let hitsByTokenChart = null;
+
+            // 대시보드 데이터 가져오기 및 렌더링
+            async function fetchDashboardData() {
+                const totalHitsElement = document.getElementById('totalHits');
+                totalHitsElement.textContent = 'Loading...';
+
                 try {
-                    const response = await fetch(API_URL); // API 호출
-                    if (!response.ok) {
-                        // HTTP 응답이 200 OK가 아닐 경우 에러 처리
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const logs = await response.json(); // JSON 형태로 파싱
+                    const response = await fetch(API_DASHBOARD_URL);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const data = await response.json();
 
-                    // 2. 테이블 생성 및 데이터 표시
+                    totalHitsElement.textContent = data.total_hits;
+
+                    // User Agents Chart (Pie Chart)
+                    const uaLabels = data.user_agents.map(item => item.categorized_ua);
+                    const uaCounts = data.user_agents.map(item => item.count);
+                    renderPieChart('userAgentsChart', uaLabels, uaCounts, 'User Agents');
+
+                    // Hits Over Time Chart (Line Chart)
+                    const timeLabels = data.hits_over_time.map(item => item.access_date);
+                    const timeCounts = data.hits_over_time.map(item => item.count);
+                    renderLineChart('hitsOverTimeChart', timeLabels, timeCounts, 'Daily Hits');
+
+                    // Hits by Token Chart (Bar Chart)
+                    const tokenLabels = data.hits_by_token.map(item => item.token);
+                    const tokenCounts = data.hits_by_token.map(item => item.count);
+                    renderBarChart('hitsByTokenChart', tokenLabels, tokenCounts, 'Hits by Token');
+
+                } catch (error) {
+                    console.error('Error fetching dashboard data:', error);
+                    totalHitsElement.textContent = 'Error';
+                    document.querySelector('.dashboard-container').innerHTML = `<p class="error">Failed to load dashboard data. Error: ${error.message}</p>`;
+                }
+            }
+
+            // 상세 로그 데이터 가져오기 및 렌더링 (기존 코드와 유사)
+            async function fetchDetailedLogs() {
+                const logsContainer = document.getElementById('logs-container');
+                logsContainer.innerHTML = '<p class="loading">Loading detailed logs...</p>';
+
+                try {
+                    const response = await fetch(API_LOGS_URL);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const logs = await response.json();
+
                     if (logs.length === 0) {
-                        logsContainer.innerHTML = '<p>No logs found yet.</p>';
+                        logsContainer.innerHTML = '<p>No detailed logs found yet.</p>';
                         return;
                     }
 
@@ -55,7 +154,8 @@
                                 <td>${log.ip}</td>
                                 <td>${log.user_agent}</td>
                                 <td>${log.token}</td>
-                                <td>${new Date(log.timestamp).toLocaleString()}</td> <td>${log.accept_language}</td>
+                                <td>${new Date(log.timestamp).toLocaleString()}</td>
+                                <td>${log.accept_language}</td>
                             </tr>
                         `;
                     });
@@ -64,16 +164,110 @@
                     logsContainer.innerHTML = tableHTML;
 
                 } catch (error) {
-                    console.error('Error fetching logs:', error);
-                    logsContainer.innerHTML = `<p class="error">Failed to load logs. Error: ${error.message}. Please check the server logs.</p>`;
+                    console.error('Error fetching detailed logs:', error);
+                    logsContainer.innerHTML = `<p class="error">Failed to load detailed logs. Error: ${error.message}.</p>`;
                 }
             }
 
-            // 페이지 로드 시 로그 가져오기
-            fetchLogs();
-            
-            // 일정 시간마다 로그 새로고침 (선택 사항)
-            // setInterval(fetchLogs, 30000); // 30초마다 새로고침
+            // --- Chart.js 렌더링 함수들 ---
+            function renderPieChart(canvasId, labels, data, title) {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                if (userAgentsChart) userAgentsChart.destroy(); // 기존 차트가 있으면 파괴
+                userAgentsChart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: [ // 색상은 원하는 대로 조정
+                                'rgba(255, 99, 132, 0.7)', 'rgba(54, 162, 235, 0.7)', 'rgba(255, 206, 86, 0.7)',
+                                'rgba(75, 192, 192, 0.7)', 'rgba(153, 102, 255, 0.7)', 'rgba(255, 159, 64, 0.7)',
+                                'rgba(199, 199, 199, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)', 'rgba(255, 206, 86, 1)',
+                                'rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)', 'rgba(255, 159, 64, 1)',
+                                'rgba(199, 199, 199, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top' },
+                            title: { display: true, text: title }
+                        }
+                    }
+                });
+            }
+
+            function renderLineChart(canvasId, labels, data, title) {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                if (hitsOverTimeChart) hitsOverTimeChart.destroy(); // 기존 차트 파괴
+                hitsOverTimeChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Hits',
+                            data: data,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            fill: true,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            title: { display: true, text: title }
+                        },
+                        scales: {
+                            x: { title: { display: true, text: 'Date' } },
+                            y: { beginAtZero: true, title: { display: true, text: 'Number of Hits' } }
+                        }
+                    }
+                });
+            }
+
+            function renderBarChart(canvasId, labels, data, title) {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                if (hitsByTokenChart) hitsByTokenChart.destroy(); // 기존 차트 파괴
+                hitsByTokenChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Hits',
+                            data: data,
+                            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            title: { display: true, text: title }
+                        },
+                        scales: {
+                            x: { title: { display: true, text: 'Token' } },
+                            y: { beginAtZero: true, title: { display: true, text: 'Number of Hits' } }
+                        }
+                    }
+                });
+            }
+
+            // 페이지 로드 시 데이터 가져오기
+            fetchDashboardData();
+            fetchDetailedLogs(); // 기존 상세 로그도 계속 표시
+
+            // 일정 시간마다 데이터 새로고침 (예: 5분마다)
+            setInterval(fetchDashboardData, 300000); // 5분 = 300000ms
+            setInterval(fetchDetailedLogs, 300000);
         });
     </script>
 </body>
