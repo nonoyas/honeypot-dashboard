@@ -78,7 +78,6 @@
             border: 1px solid var(--border-color); /* 테두리 추가 */
             transition: transform 0.2s ease, box-shadow 0.2s ease; /* 호버 효과 */
             
-            /* 여기를 수정: 차트 카드의 명시적인 높이와 오버플로우 숨김 */
             height: 350px; /* 고정 높이 설정 */
             overflow: hidden; /* 내용이 넘치면 숨김 */
             position: relative; /* 자식 요소 (데이터 없음 메시지) 위치 지정을 위해 */
@@ -228,6 +227,12 @@
             let hitsOverTimeChart = null;
             let hitsByTokenChart = null;
 
+            // Chart.js의 기본 전역 폰트 및 색상 설정
+            // 이렇게 설정하면 각 차트 옵션마다 반복해서 설정할 필요가 줄어듭니다.
+            Chart.defaults.color = getComputedStyle(document.documentElement).getPropertyValue('--chart-label-color').trim();
+            Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+            Chart.defaults.font.size = 12; // 기본 폰트 크기
+
             function showNoDataMessage(canvasId, message) {
                 const chartCanvas = document.getElementById(canvasId);
                 const parentCard = chartCanvas.closest('.chart-card');
@@ -266,7 +271,6 @@
 
                     totalHitsElement.textContent = data.total_hits;
 
-                    // User Agents Chart (Pie Chart)
                     if (data.user_agents && data.user_agents.length > 0 && data.user_agents.some(item => item.count > 0)) {
                         showChartCanvas('userAgentsChart');
                         const uaLabels = data.user_agents.map(item => item.categorized_ua);
@@ -277,7 +281,6 @@
                         if (userAgentsChart) userAgentsChart.destroy();
                     }
 
-                    // Hits Over Time Chart (Line Chart)
                     if (data.hits_over_time && data.hits_over_time.length > 0 && data.hits_over_time.some(item => item.count > 0)) {
                         showChartCanvas('hitsOverTimeChart');
                         const timeLabels = data.hits_over_time.map(item => item.access_date);
@@ -288,7 +291,6 @@
                         if (hitsOverTimeChart) hitsOverTimeChart.destroy();
                     }
 
-                    // Hits by Token Chart (Bar Chart)
                     if (data.hits_by_token && data.hits_by_token.length > 0 && data.hits_by_token.some(item => item.count > 0)) {
                         showChartCanvas('hitsByTokenChart');
                         const topTokens = data.hits_by_token.slice(0, 10);
@@ -395,6 +397,14 @@
                                 color: 'var(--text-color)', // 차트 제목 색상
                                 font: { size: 16, weight: 'bold' },
                                 padding: { top: 10, bottom: 15 }
+                            },
+                            tooltip: { // 툴팁 텍스트 색상 설정
+                                titleColor: 'white', // 툴팁 제목 색상
+                                bodyColor: 'white',  // 툴팁 본문 색상
+                                footerColor: 'white', // 툴팁 푸터 색상
+                                backgroundColor: 'rgba(0, 0, 0, 0.7)', // 툴팁 배경색을 진하게
+                                borderColor: 'var(--blue-highlight)',
+                                borderWidth: 1
                             }
                         }
                     }
@@ -428,6 +438,14 @@
                                 color: 'var(--text-color)', // 차트 제목 색상
                                 font: { size: 16, weight: 'bold' },
                                 padding: { top: 10, bottom: 15 }
+                            },
+                            tooltip: { // 툴팁 텍스트 색상 설정
+                                titleColor: 'white',
+                                bodyColor: 'white',
+                                footerColor: 'white',
+                                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                                borderColor: 'var(--blue-highlight)',
+                                borderWidth: 1
                             }
                         },
                         scales: {
@@ -479,6 +497,14 @@
                                 color: 'var(--text-color)', // 차트 제목 색상
                                 font: { size: 16, weight: 'bold' },
                                 padding: { top: 10, bottom: 15 }
+                            },
+                            tooltip: { // 툴팁 텍스트 색상 설정
+                                titleColor: 'white',
+                                bodyColor: 'white',
+                                footerColor: 'white',
+                                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                                borderColor: 'var(--blue-highlight)',
+                                borderWidth: 1
                             }
                         },
                         scales: {
