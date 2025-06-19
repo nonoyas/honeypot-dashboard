@@ -10,15 +10,15 @@
         :root {
             --dark-bg: #1a1a2e;        /* 전체 배경 */
             --card-bg: #21213c;        /* 카드 및 차트 배경 */
-            --text-color: #e0e0e0;     /* 기본 텍스트 색상 */
-            --heading-color: #e94560;  /* 주요 제목 색상 */
+            --text-color: #e0e0e0;     /* 기본 텍스트 색상 (밝은 회색) */
+            --heading-color: #e94560;  /* 주요 제목 색상 (붉은색) */
             --blue-highlight: #0f4c75; /* 강조 파란색 (버튼, 링크 등) */
-            --chart-grid-color: #4a4a6e; /* 차트 그리드 라인 색상 */
-            --chart-label-color: #c0c0c0; /* 차트 레이블 색상 */
-            --total-hits-color: #00bcd4; /* 총 히트 수 강조 색상 */
-            --border-color: #3e3e5c;   /* 구분선, 테두리 색상 */
-            --table-header-bg: #33334f; /* 테이블 헤더 배경 */
-            --table-row-hover: #2a2a47; /* 테이블 행 호버 색상 */
+            --chart-grid-color: #4a4a6e; /* 차트 그리드 라인 색상 (중간 회색) */
+            --chart-label-color: #c0c0c0; /* 차트 레이블 색상 (밝은 회색) */
+            --total-hits-color: #00bcd4; /* 총 히트 수 강조 색상 (하늘색) */
+            --border-color: #3e3e5c;   /* 구분선, 테두리 색상 (어두운 회색) */
+            --table-header-bg: #33334f; /* 테이블 헤더 배경 (어두운 보라색) */
+            --table-row-hover: #2a2a47; /* 테이블 행 호버 색상 (더 어두운 보라색) */
         }
 
         body {
@@ -221,26 +221,21 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // !!! IMPORTANT: Replace these with your actual PythonAnywhere web app URLs !!!
-            const API_DASHBOARD_URL = 'https://nonoyas.pythonanywhere.com/api/dashboard'; // 본인의 대시보드 API 주소
-            const API_LOGS_URL = 'https://nonoyas.pythonanywhere.com/api/logs';       // 본인의 상세 로그 API 주소
+            const API_DASHBOARD_URL = 'https://nonoyas.pythonanywhere.com/api/dashboard';
+            const API_LOGS_URL = 'https://nonoyas.pythonanywhere.com/api/logs';
 
-            // 차트 인스턴스 저장용 변수
             let userAgentsChart = null;
             let hitsOverTimeChart = null;
             let hitsByTokenChart = null;
 
-            // 차트 컨테이너에 메시지를 표시하는 헬퍼 함수
             function showNoDataMessage(canvasId, message) {
                 const chartCanvas = document.getElementById(canvasId);
                 const parentCard = chartCanvas.closest('.chart-card');
                 if (parentCard) {
-                    // 기존 캔버스를 숨김
                     chartCanvas.style.display = 'none';
-                    // 기존 메시지가 있으면 제거
                     const existingMessage = parentCard.querySelector('.no-data-message');
                     if (existingMessage) existingMessage.remove();
 
-                    // 새 메시지 추가
                     const msgDiv = document.createElement('div');
                     msgDiv.className = 'no-data-message';
                     msgDiv.textContent = message;
@@ -248,7 +243,6 @@
                 }
             }
 
-            // 차트 컨테이너에서 메시지를 제거하고 캔버스를 보이게 하는 헬퍼 함수
             function showChartCanvas(canvasId) {
                 const chartCanvas = document.getElementById(canvasId);
                 const parentCard = chartCanvas.closest('.chart-card');
@@ -259,7 +253,6 @@
                 }
             }
 
-            // 대시보드 데이터 가져오기 및 렌더링
             async function fetchDashboardData() {
                 const totalHitsElement = document.getElementById('totalHits');
                 totalHitsElement.textContent = 'Loading...';
@@ -274,7 +267,6 @@
                     totalHitsElement.textContent = data.total_hits;
 
                     // User Agents Chart (Pie Chart)
-                    // 유의미한 데이터가 1개 이상일 때만 차트 표시
                     if (data.user_agents && data.user_agents.length > 0 && data.user_agents.some(item => item.count > 0)) {
                         showChartCanvas('userAgentsChart');
                         const uaLabels = data.user_agents.map(item => item.categorized_ua);
@@ -285,9 +277,7 @@
                         if (userAgentsChart) userAgentsChart.destroy();
                     }
 
-
                     // Hits Over Time Chart (Line Chart)
-                    // 유의미한 데이터가 1개 이상일 때만 차트 표시
                     if (data.hits_over_time && data.hits_over_time.length > 0 && data.hits_over_time.some(item => item.count > 0)) {
                         showChartCanvas('hitsOverTimeChart');
                         const timeLabels = data.hits_over_time.map(item => item.access_date);
@@ -298,9 +288,7 @@
                         if (hitsOverTimeChart) hitsOverTimeChart.destroy();
                     }
 
-
                     // Hits by Token Chart (Bar Chart)
-                    // 유의미한 데이터가 1개 이상일 때만 차트 표시
                     if (data.hits_by_token && data.hits_by_token.length > 0 && data.hits_by_token.some(item => item.count > 0)) {
                         showChartCanvas('hitsByTokenChart');
                         const topTokens = data.hits_by_token.slice(0, 10);
@@ -321,11 +309,9 @@
                 } catch (error) {
                     console.error('Error fetching dashboard data:', error);
                     totalHitsElement.textContent = 'Error';
-                    // 에러 발생 시 모든 차트에 메시지 표시
                     showNoDataMessage('userAgentsChart', 'Error loading data.');
                     showNoDataMessage('hitsOverTimeChart', 'Error loading data.');
                     showNoDataMessage('hitsByTokenChart', 'Error loading data.');
-                    // 기존 차트 인스턴스 파괴
                     if (userAgentsChart) userAgentsChart.destroy();
                     if (hitsOverTimeChart) hitsOverTimeChart.destroy();
                     if (hitsByTokenChart) hitsByTokenChart.destroy();
@@ -334,7 +320,6 @@
                 }
             }
 
-            // 상세 로그 데이터 가져오기 및 렌더링
             async function fetchDetailedLogs() {
                 const logsContainer = document.getElementById('logs-container');
                 logsContainer.innerHTML = '<p class="loading">Loading detailed logs...</p>';
@@ -376,7 +361,7 @@
                 }
             }
 
-            // --- Chart.js 렌더링 함수들 (옵션에 height: 100% 반영) ---
+            // --- Chart.js 렌더링 함수들 (텍스트 색상 명시적 설정 강화) ---
             function renderPieChart(canvasId, labels, data, title) {
                 const ctx = document.getElementById(canvasId).getContext('2d');
                 if (userAgentsChart) userAgentsChart.destroy();
@@ -395,19 +380,19 @@
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false, // 부모 컨테이너의 크기에 맞춰짐
+                        maintainAspectRatio: false,
                         plugins: {
                             legend: {
                                 position: 'right',
                                 labels: {
-                                    color: 'var(--chart-label-color)',
+                                    color: 'var(--chart-label-color)', // 범례 텍스트 색상
                                     font: { size: 12 }
                                 }
                             },
                             title: {
                                 display: true,
                                 text: title,
-                                color: 'var(--text-color)',
+                                color: 'var(--text-color)', // 차트 제목 색상
                                 font: { size: 16, weight: 'bold' },
                                 padding: { top: 10, bottom: 15 }
                             }
@@ -434,13 +419,13 @@
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false, // 부모 컨테이너의 크기에 맞춰짐
+                        maintainAspectRatio: false,
                         plugins: {
                             legend: { display: false },
                             title: {
                                 display: true,
                                 text: title,
-                                color: 'var(--text-color)',
+                                color: 'var(--text-color)', // 차트 제목 색상
                                 font: { size: 16, weight: 'bold' },
                                 padding: { top: 10, bottom: 15 }
                             }
@@ -448,13 +433,19 @@
                         scales: {
                             x: {
                                 title: { display: true, text: 'Date', color: 'var(--chart-label-color)', font: { size: 14, weight: 'bold' } },
-                                ticks: { color: 'var(--chart-label-color)', font: { size: 10 } },
+                                ticks: {
+                                    color: 'var(--chart-label-color)', // X축 레이블 색상
+                                    font: { size: 10 }
+                                },
                                 grid: { color: 'var(--chart-grid-color)' }
                             },
                             y: {
                                 beginAtZero: true,
                                 title: { display: true, text: 'Number of Hits', color: 'var(--chart-label-color)', font: { size: 14, weight: 'bold' } },
-                                ticks: { color: 'var(--chart-label-color)', font: { size: 10 } },
+                                ticks: {
+                                    color: 'var(--chart-label-color)', // Y축 레이블 색상
+                                    font: { size: 10 }
+                                },
                                 grid: { color: 'var(--chart-grid-color)' }
                             }
                         }
@@ -479,13 +470,13 @@
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false, // 부모 컨테이너의 크기에 맞춰짐
+                        maintainAspectRatio: false,
                         plugins: {
                             legend: { display: false },
                             title: {
                                 display: true,
                                 text: title,
-                                color: 'var(--text-color)',
+                                color: 'var(--text-color)', // 차트 제목 색상
                                 font: { size: 16, weight: 'bold' },
                                 padding: { top: 10, bottom: 15 }
                             }
@@ -494,7 +485,7 @@
                             x: {
                                 title: { display: true, text: 'Token', color: 'var(--chart-label-color)', font: { size: 14, weight: 'bold' } },
                                 ticks: {
-                                    color: 'var(--chart-label-color)',
+                                    color: 'var(--chart-label-color)', // X축 레이블 색상
                                     font: { size: 10 },
                                     autoSkip: false,
                                     maxRotation: 45,
@@ -504,7 +495,10 @@
                             y: {
                                 beginAtZero: true,
                                 title: { display: true, text: 'Number of Hits', color: 'var(--chart-label-color)', font: { size: 14, weight: 'bold' } },
-                                ticks: { color: 'var(--chart-label-color)', font: { size: 10 } },
+                                ticks: {
+                                    color: 'var(--chart-label-color)', // Y축 레이블 색상
+                                    font: { size: 10 }
+                                },
                                 grid: { color: 'var(--chart-grid-color)' }
                             }
                         }
@@ -512,12 +506,10 @@
                 });
             }
 
-            // 페이지 로드 시 데이터 가져오기
             fetchDashboardData();
             fetchDetailedLogs();
 
-            // 일정 시간마다 데이터 새로고침 (예: 5분마다)
-            setInterval(fetchDashboardData, 300000); // 5분 = 300000ms
+            setInterval(fetchDashboardData, 300000);
             setInterval(fetchDetailedLogs, 300000);
         });
     </script>
