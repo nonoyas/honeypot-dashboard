@@ -1,47 +1,80 @@
-<!-- index.html (honeypot-dashboard 저장소에 푸시) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HoneyPot Dashboard</title>
-    <!-- Inter 폰트를 사용하기 위해 Google Fonts 링크 추가 -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <title>Honeypot Access Logs</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        h1 { color: #0056b3; }
+        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .error { color: red; font-weight: bold; }
+        .loading { text-align: center; margin-20px; color: #666; }
+    </style>
 </head>
 <body>
-  <!-- 실제 엑셀 파일 다운로드 링크 옆에 숨겨진 픽셀 이미지 -->
-  <img src="https://nonoyas.pythonanywhere.com/honey.gif?token=sales_report_2024_Q2" style="display:none" alt="">
     <div class="container">
-        <h1>HoneyPot Dashboard</h1>
-        <p>마지막 업데이트: <span id="last-updated"></span></p>
-        <div class="chart-section">
-            <h2>일별 접근 횟수</h2>
-            <div id="daily-hits-chart"></div>
-        </div>
-        <div class="chart-section">
-            <h2>상위 10개 IP</h2>
-            <ul id="top-ips-list"></ul>
-        </div>
-        <div class="chart-section">
-            <h2>모든 로그</h2>
-            <table id="all-logs-table">
-                <thead>
-                    <tr>
-                        <th>IP</th>
-                        <th>User Agent</th>
-                        <th>Token</th>
-                        <th>Timestamp</th>
-                        <th>Accept-Language</th> <!-- 새 컬럼 헤더 추가 -->
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Logs will be inserted here by JS -->
-                </tbody>
-            </table>
+        <h1>Honeypot Access Logs</h1>
+        <p>This page displays access logs from the honeypot. Data is fetched from a PythonAnywhere API.</p>
+        <div id="logs-container">
+            <p class="loading">Loading logs...</p>
         </div>
     </div>
-    <script src="script.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const logsContainer = document.getElementById('logs-container');
+            const API_URL = 'https://nonoyas.pythonanywhere.com/api/logs'; // <-- 본인의 PythonAnywhere API 주소!
+
+            // 1. 데이터 가져오기 함수
+            async function fetchLogs() {
+                try {
+                    const response = await fetch(API_URL); // API 호출
+                    if (!response.ok) {
+                        // HTTP 응답이 200 OK가 아닐 경우 에러 처리
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const logs = await response.json(); // JSON 형태로 파싱
+
+                    // 2. 테이블 생성 및 데이터 표시
+                    if (logs.length === 0) {
+                        logsContainer.innerHTML = '<p>No logs found yet.</p>';
+                        return;
+                    }
+
+                    let tableHTML = '<table>';
+                    tableHTML += '<thead><tr><th>IP Address</th><th>User Agent</th><th>Token</th><th>Timestamp</th><th>Accept-Language</th></tr></thead>';
+                    tableHTML += '<tbody>';
+
+                    logs.forEach(log => {
+                        tableHTML += `
+                            <tr>
+                                <td>${log.ip}</td>
+                                <td>${log.user_agent}</td>
+                                <td>${log.token}</td>
+                                <td>${new Date(log.timestamp).toLocaleString()}</td> <td>${log.accept_language}</td>
+                            </tr>
+                        `;
+                    });
+
+                    tableHTML += '</tbody></table>';
+                    logsContainer.innerHTML = tableHTML;
+
+                } catch (error) {
+                    console.error('Error fetching logs:', error);
+                    logsContainer.innerHTML = `<p class="error">Failed to load logs. Error: ${error.message}. Please check the server logs.</p>`;
+                }
+            }
+
+            // 페이지 로드 시 로그 가져오기
+            fetchLogs();
+            
+            // 일정 시간마다 로그 새로고침 (선택 사항)
+            // setInterval(fetchLogs, 30000); // 30초마다 새로고침
+        });
+    </script>
 </body>
 </html>
