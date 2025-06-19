@@ -34,9 +34,18 @@
         h1, h2 {
             color: var(--heading-color); /* 제목 색상 적용 */
             text-align: center;
-            margin-bottom: 25px;
+            margin-bottom: 15px; /* 시간 표시와 제목 사이 간격 조정 */
             font-weight: 600;
         }
+
+        /* 현재 시간 표시 스타일 */
+        .current-time {
+            text-align: center;
+            font-size: 1.1em;
+            color: var(--text-color); /* 텍스트 색상과 동일하게 */
+            margin-bottom: 25px; /* 대시보드 컨테이너와 시간 사이 간격 */
+        }
+
 
         .dashboard-container {
             display: grid;
@@ -56,7 +65,7 @@
 
         .card:first-child { /* Total Bot Hits 카드의 첫 번째 div 선택 */
             grid-area: total-hits;
-            min-height: 100px; /* <-- 여기를 100px로 줄였습니다. */
+            min-height: 100px; 
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -198,7 +207,8 @@
     </style>
 </head>
 <body>
-    <h1>Real-time Bot Attack Surveillance</h1> <div class="dashboard-container">
+    <h1>Real-time Bot Attack Surveillance</h1>
+    <p id="currentTime" class="current-time">Loading current time...</p> <div class="dashboard-container">
         <div class="card">
             <h3>Total Bot Hits</h3>
             <p id="totalHits">Loading...</p>
@@ -238,6 +248,32 @@
             Chart.defaults.color = 'white'; 
             Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
             Chart.defaults.font.size = 12;
+
+            // --- 실시간 시간 업데이트 함수 추가 ---
+            function updateCurrentTime() {
+                const now = new Date();
+                // 'ko-KR' 로케일과 'Asia/Seoul' 타임존을 명시하여 한국 시간으로 포맷
+                const options = {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false, // 24시간 형식
+                    timeZone: 'Asia/Seoul'
+                };
+                const formattedTime = now.toLocaleString('ko-KR', options);
+                document.getElementById('currentTime').textContent = `Current KST: ${formattedTime}`;
+            }
+
+            // 페이지 로드 시 바로 시간 업데이트
+            updateCurrentTime();
+            // 1초마다 시간 업데이트
+            setInterval(updateCurrentTime, 1000);
+            // ------------------------------------
+
 
             function showNoDataMessage(canvasId, message) {
                 const chartCanvas = document.getElementById(canvasId);
