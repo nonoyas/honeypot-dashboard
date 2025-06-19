@@ -40,9 +40,7 @@
 
         .dashboard-container {
             display: grid;
-            /* 그리드 템플릿 조정: 첫 번째 컬럼(Total Hits)을 더 넓게 */
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* 최소 크기 조정 */
-            /* Total Hits 카드가 첫 번째 행의 두 칸을 차지하도록 명시 */
             grid-template-areas:
                 "total-hits total-hits"
                 "user-agents time-hits"
@@ -56,7 +54,6 @@
             box-shadow: 0 5px 20px rgba(0,0,0,0.4); /* 그림자 강조 */
         }
 
-        /* Total Bot Hits 카드가 그리드의 'total-hits' 영역을 차지하도록 설정 */
         .card:first-child { /* Total Bot Hits 카드의 첫 번째 div 선택 */
             grid-area: total-hits;
             min-height: 150px; /* 최소 높이 설정으로 숫자가 충분히 크게 보이도록 */
@@ -149,10 +146,19 @@
             margin-bottom: 20px;
         }
 
+        /* 상세 로그 테이블 컨테이너에 스크롤 적용 */
+        .log-table-container {
+            max-height: 400px; /* 원하는 최대 높이 설정 */
+            overflow-y: auto;  /* 세로 스크롤바 표시 */
+            border: 1px solid var(--border-color); /* 컨테이너 테두리 */
+            border-radius: 5px; /* 컨테이너 테두리 둥글게 */
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            /* margin-top은 .log-table-container에서 관리하므로 여기서 제거 */
+            margin-top: 0;
         }
 
         th, td {
@@ -167,6 +173,9 @@
             background-color: var(--table-header-bg); /* 테이블 헤더 배경 */
             font-weight: 600;
             color: #f0f0f0; /* 헤더 텍스트 색상 */
+            position: sticky; /* 스크롤 시 헤더 고정 */
+            top: 0; /* 스크롤 상단에 고정 */
+            z-index: 1; /* 다른 내용 위에 표시 */
         }
 
         tr:nth-child(even) { /* 짝수 행 배경 */
@@ -202,7 +211,7 @@
 
     <div class="current-logs-section">
         <h2>Recent Access Logs (Detailed)</h2>
-        <div id="logs-container">
+        <div id="logs-container" class="log-table-container">
             <p class="loading">Loading detailed logs...</p>
         </div>
     </div>
@@ -256,7 +265,6 @@
                 try {
                     const response = await fetch(API_DASHBOARD_URL);
                     if (!response.ok) {
-                        // HTTP 응답이 200 OK가 아닐 경우 에러 처리
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     const data = await response.json();
@@ -316,6 +324,7 @@
             // 상세 로그 데이터 가져오기 및 렌더링
             async function fetchDetailedLogs() {
                 const logsContainer = document.getElementById('logs-container');
+                // 컨테이너 초기화 시 로딩 메시지를 표시
                 logsContainer.innerHTML = '<p class="loading">Loading detailed logs...</p>';
 
                 try {
@@ -330,6 +339,7 @@
                         return;
                     }
 
+                    // 테이블을 새로운 div로 감싸서 scroll-container 역할을 하도록 변경
                     let tableHTML = '<table>';
                     tableHTML += '<thead><tr><th>IP Address</th><th>User Agent</th><th>Token</th><th>Timestamp</th><th>Accept-Language</th></tr></thead>';
                     tableHTML += '<tbody>';
@@ -347,7 +357,7 @@
                     });
 
                     tableHTML += '</tbody></table>';
-                    logsContainer.innerHTML = tableHTML;
+                    logsContainer.innerHTML = tableHTML; // logsContainer 자체가 스크롤 컨테이너 역할을 함
 
                 } catch (error) {
                     console.error('Error fetching detailed logs:', error);
@@ -477,7 +487,7 @@
                                     }
                                 },
                                 grid: {
-                                    color: 'var(--chart-grid-color)' // 그리드 라인 색상
+                                    color: 'var(--chart-grid-color)'
                                 }
                             }
                         }
