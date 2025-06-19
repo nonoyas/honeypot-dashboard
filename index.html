@@ -55,7 +55,7 @@
                 "user-agents time-hits"
                 "token-hits token-hits";
             gap: 20px;
-            max-width: 1200px;
+            max-width: 1800px; /* <-- 여기를 1800px로 변경했습니다. */
             margin: 0 auto;
             padding: 20px;
             background-color: var(--card-bg); /* 대시보드 컨테이너 배경 */
@@ -155,7 +155,7 @@
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            max-width: 1200px;
+            max-width: 1800px; /* <-- 여기를 1800px로 변경했습니다. */
             margin-left: auto;
             margin-right: auto;
             border: 1px solid var(--border-color);
@@ -208,7 +208,9 @@
 </head>
 <body>
     <h1>Real-time Bot Attack Surveillance</h1>
-    <p id="currentTime" class="current-time">Loading current time...</p> <div class="dashboard-container">
+    <p id="currentTime" class="current-time">Loading current time...</p> 
+
+    <div class="dashboard-container">
         <div class="card">
             <h3>Total Bot Hits</h3>
             <p id="totalHits">Loading...</p>
