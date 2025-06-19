@@ -56,7 +56,11 @@
 
         .card:first-child { /* Total Bot Hits 카드의 첫 번째 div 선택 */
             grid-area: total-hits;
-            min-height: 150px; /* 최소 높이 설정으로 숫자가 충분히 크게 보이도록 */
+            min-height: 100px; /* <-- 여기를 100px로 줄였습니다. */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
         /* 차트 카드에 그리드 영역 할당 (반응형 대응) */
@@ -82,6 +86,11 @@
             overflow: hidden; /* 내용이 넘치면 숨김 */
             position: relative; /* 자식 요소 (데이터 없음 메시지) 위치 지정을 위해 */
         }
+        /* Total Bot Hits 카드에만 따로 적용되는 flex 속성 해제 (위에서 처리) */
+        .card:first-child.card {
+            height: auto; /* 내용물에 따라 자동으로 높이 조절 */
+        }
+
 
         .card:hover, .chart-card:hover {
             transform: translateY(-5px); /* 살짝 위로 뜨는 효과 */
@@ -150,7 +159,7 @@
 
         /* 상세 로그 테이블 컨테이너에 스크롤 적용 */
         .log-table-container {
-            max-height: 600px; /* <--- 이 값을 600px로 변경했습니다. (원하시면 700px도 가능) */
+            max-height: 600px; 
             overflow-y: auto;  /* 세로 스크롤바 표시 */
             border: 1px solid var(--border-color); /* 컨테이너 테두리 */
             border-radius: 5px; /* 컨테이너 테두리 둥글게 */
@@ -189,9 +198,7 @@
     </style>
 </head>
 <body>
-    <h1>Honeypot Bot Traffic Dashboard</h1>
-    <h2>Insights into Automated Access</h2>
-    <div class="dashboard-container">
+    <h1>Real-time Bot Attack Surveillance</h1> <div class="dashboard-container">
         <div class="card">
             <h3>Total Bot Hits</h3>
             <p id="totalHits">Loading...</p>
