@@ -40,7 +40,13 @@
 
         .dashboard-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* 반응형 그리드 */
+            /* 그리드 템플릿 조정: 첫 번째 컬럼(Total Hits)을 더 넓게 */
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* 최소 크기 조정 */
+            /* Total Hits 카드가 첫 번째 행의 두 칸을 차지하도록 명시 */
+            grid-template-areas:
+                "total-hits total-hits"
+                "user-agents time-hits"
+                "token-hits token-hits";
             gap: 20px;
             max-width: 1200px;
             margin: 0 auto;
@@ -49,6 +55,18 @@
             border-radius: 10px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.4); /* 그림자 강조 */
         }
+
+        /* Total Bot Hits 카드가 그리드의 'total-hits' 영역을 차지하도록 설정 */
+        .card:first-child { /* Total Bot Hits 카드의 첫 번째 div 선택 */
+            grid-area: total-hits;
+            min-height: 150px; /* 최소 높이 설정으로 숫자가 충분히 크게 보이도록 */
+        }
+
+        /* 차트 카드에 그리드 영역 할당 (반응형 대응) */
+        .chart-card:nth-of-type(2) { grid-area: user-agents; } /* Top User Agents */
+        .chart-card:nth-of-type(3) { grid-area: time-hits; }    /* Hits Over Time */
+        .chart-card:nth-of-type(4) { grid-area: token-hits; }   /* Hits by Token */
+
 
         .card, .chart-card {
             background-color: var(--card-bg); /* 카드 및 차트 배경 적용 */
@@ -78,7 +96,7 @@
         }
 
         .card p#totalHits { /* Total Bot Hits 숫자 전용 스타일 */
-            font-size: 5em; /* 숫자 크기 훨씬 크게 */
+            font-size: 5.5em; /* 숫자 크기 훨씬 크게 */
             font-weight: bold;
             color: var(--total-hits-color); /* 강조 색상 적용 */
             margin: 0; /* 불필요한 마진 제거 */
@@ -211,10 +229,20 @@
                     const timeCounts = data.hits_over_time.map(item => item.count);
                     renderLineChart('hitsOverTimeChart', timeLabels, timeCounts, 'Daily Hits Over Time');
 
-                    // Hits by Token Chart (Bar Chart)
-                    const tokenLabels = data.hits_by_token.map(item => item.token);
-                    const tokenCounts = data.hits_by_token.map(item => item.count);
-                    renderBarChart('hitsByTokenChart', tokenLabels, tokenCounts, 'Hits by Token Distribution');
+                    // --- Hits by Token Chart (Bar Chart) 수정 ---
+                    // 상위 10개 토큰만 가져와서 렌더링
+                    const topTokens = data.hits_by_token.slice(0, 10); // 상위 10개만 슬라이스
+                    const tokenLabels = topTokens.map(item => item.token);
+                    const tokenCounts = topTokens.map(item => item.count);
+
+                    // 만약 상위 10개 외의 토큰이 있다면 'Others'로 묶어 추가
+                    if (data.hits_by_token.length > 10) {
+                        const otherCount = data.hits_by_token.slice(10).reduce((sum, item) => sum + item.count, 0);
+                        tokenLabels.push('Others');
+                        tokenCounts.push(otherCount);
+                    }
+
+                    renderBarChart('hitsByTokenChart', tokenLabels, tokenCounts, 'Top 10 Hits by Token Distribution'); // 제목도 변경
 
                 } catch (error) {
                     console.error('Error fetching dashboard data:', error);
@@ -223,7 +251,7 @@
                 }
             }
 
-            // 상세 로그 데이터 가져오기 및 렌더링 (기존 코드와 유사)
+            // 상세 로그 데이터 가져오기 및 렌더링
             async function fetchDetailedLogs() {
                 const logsContainer = document.getElementById('logs-container');
                 logsContainer.innerHTML = '<p class="loading">Loading detailed logs...</p>';
@@ -231,7 +259,6 @@
                 try {
                     const response = await fetch(API_LOGS_URL);
                     if (!response.ok) {
-                        // HTTP 응답이 200 OK가 아닐 경우 에러 처리
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     const logs = await response.json();
@@ -251,7 +278,8 @@
                                 <td>${log.ip}</td>
                                 <td>${log.user_agent}</td>
                                 <td>${log.token}</td>
-                                <td>${new Date(log.timestamp).toLocaleString()}</td> <td>${log.accept_language}</td>
+                                <td>${new Date(log.timestamp).toLocaleString()}</td>
+                                <td>${log.accept_language}</td>
                             </tr>
                         `;
                     });
@@ -443,11 +471,11 @@
                                 ticks: {
                                     color: 'var(--chart-label-color)',
                                     font: {
-                                        size: 10 // X축 레이블 크기
-                                    }
-                                },
-                                grid: {
-                                    color: 'var(--chart-grid-color)'
+                                        size: 10 // X축 레이블 (토큰 이름) 크기
+                                    },
+                                    autoSkip: false, // 모든 라벨 표시 시도 (라벨이 많으면 겹칠 수 있음)
+                                    maxRotation: 45, // 라벨 기울기 (겹침 방지)
+                                    minRotation: 0
                                 }
                             },
                             y: {
