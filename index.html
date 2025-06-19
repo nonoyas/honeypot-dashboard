@@ -80,6 +80,8 @@
             align-items: center;
             border: 1px solid var(--border-color); /* 테두리 추가 */
             transition: transform 0.2s ease, box-shadow 0.2s ease; /* 호버 효과 */
+            min-height: 250px; /* 차트 카드도 최소 높이 유지 (차트 없을 때 빈 공간 대비) */
+            position: relative; /* 자식 요소 (데이터 없음 메시지) 위치 지정을 위해 */
         }
 
         .card:hover, .chart-card:hover {
@@ -116,6 +118,18 @@
             margin-top: 20px;
             font-weight: bold;
             color: var(--heading-color); /* 에러/로딩 메시지 색상 */
+        }
+
+        /* 차트 데이터 없을 때 표시될 메시지 스타일 */
+        .no-data-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--chart-label-color);
+            font-size: 1.1em;
+            text-align: center;
+            width: 90%; /* 메시지가 카드 너비에 맞춰지도록 */
         }
 
         .current-logs-section {
@@ -204,6 +218,36 @@
             let hitsOverTimeChart = null;
             let hitsByTokenChart = null;
 
+            // 차트 컨테이너에 메시지를 표시하는 헬퍼 함수
+            function showNoDataMessage(canvasId, message) {
+                const chartCanvas = document.getElementById(canvasId);
+                const parentCard = chartCanvas.closest('.chart-card');
+                if (parentCard) {
+                    // 기존 캔버스를 숨기거나 제거
+                    chartCanvas.style.display = 'none';
+                    // 기존 메시지가 있으면 제거
+                    const existingMessage = parentCard.querySelector('.no-data-message');
+                    if (existingMessage) existingMessage.remove();
+
+                    // 새 메시지 추가
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = 'no-data-message';
+                    msgDiv.textContent = message;
+                    parentCard.appendChild(msgDiv);
+                }
+            }
+
+            // 차트 컨테이너에서 메시지를 제거하고 캔버스를 보이게 하는 헬퍼 함수
+            function showChartCanvas(canvasId) {
+                const chartCanvas = document.getElementById(canvasId);
+                const parentCard = chartCanvas.closest('.chart-card');
+                if (parentCard) {
+                    chartCanvas.style.display = 'block';
+                    const existingMessage = parentCard.querySelector('.no-data-message');
+                    if (existingMessage) existingMessage.remove();
+                }
+            }
+
             // 대시보드 데이터 가져오기 및 렌더링
             async function fetchDashboardData() {
                 const totalHitsElement = document.getElementById('totalHits');
@@ -220,29 +264,47 @@
                     totalHitsElement.textContent = data.total_hits;
 
                     // User Agents Chart (Pie Chart)
-                    const uaLabels = data.user_agents.map(item => item.categorized_ua);
-                    const uaCounts = data.user_agents.map(item => item.count);
-                    renderPieChart('userAgentsChart', uaLabels, uaCounts, 'Top User Agents');
-
-                    // Hits Over Time Chart (Line Chart)
-                    const timeLabels = data.hits_over_time.map(item => item.access_date);
-                    const timeCounts = data.hits_over_time.map(item => item.count);
-                    renderLineChart('hitsOverTimeChart', timeLabels, timeCounts, 'Daily Hits Over Time');
-
-                    // --- Hits by Token Chart (Bar Chart) 수정 ---
-                    // 상위 10개 토큰만 가져와서 렌더링
-                    const topTokens = data.hits_by_token.slice(0, 10); // 상위 10개만 슬라이스
-                    const tokenLabels = topTokens.map(item => item.token);
-                    const tokenCounts = topTokens.map(item => item.count);
-
-                    // 만약 상위 10개 외의 토큰이 있다면 'Others'로 묶어 추가
-                    if (data.hits_by_token.length > 10) {
-                        const otherCount = data.hits_by_token.slice(10).reduce((sum, item) => sum + item.count, 0);
-                        tokenLabels.push('Others');
-                        tokenCounts.push(otherCount);
+                    if (data.user_agents && data.user_agents.length > 0) {
+                        showChartCanvas('userAgentsChart');
+                        const uaLabels = data.user_agents.map(item => item.categorized_ua);
+                        const uaCounts = data.user_agents.map(item => item.count);
+                        renderPieChart('userAgentsChart', uaLabels, uaCounts, 'Top User Agents');
+                    } else {
+                        showNoDataMessage('userAgentsChart', 'No User Agent data available.');
+                        if (userAgentsChart) userAgentsChart.destroy(); // 기존 차트가 있으면 파괴
                     }
 
-                    renderBarChart('hitsByTokenChart', tokenLabels, tokenCounts, 'Top 10 Hits by Token Distribution'); // 제목도 변경
+
+                    // Hits Over Time Chart (Line Chart)
+                    if (data.hits_over_time && data.hits_over_time.length > 0) {
+                        showChartCanvas('hitsOverTimeChart');
+                        const timeLabels = data.hits_over_time.map(item => item.access_date);
+                        const timeCounts = data.hits_over_time.map(item => item.count);
+                        renderLineChart('hitsOverTimeChart', timeLabels, timeCounts, 'Daily Hits Over Time');
+                    } else {
+                        showNoDataMessage('hitsOverTimeChart', 'No Hits Over Time data available.');
+                        if (hitsOverTimeChart) hitsOverTimeChart.destroy(); // 기존 차트가 있으면 파괴
+                    }
+
+
+                    // Hits by Token Chart (Bar Chart)
+                    if (data.hits_by_token && data.hits_by_token.length > 0) {
+                        showChartCanvas('hitsByTokenChart');
+                        const topTokens = data.hits_by_token.slice(0, 10); // 상위 10개만 슬라이스
+                        const tokenLabels = topTokens.map(item => item.token);
+                        const tokenCounts = topTokens.map(item => item.count);
+
+                        // 만약 상위 10개 외의 토큰이 있다면 'Others'로 묶어 추가
+                        if (data.hits_by_token.length > 10) {
+                            const otherCount = data.hits_by_token.slice(10).reduce((sum, item) => sum + item.count, 0);
+                            tokenLabels.push('Others');
+                            tokenCounts.push(otherCount);
+                        }
+                        renderBarChart('hitsByTokenChart', tokenLabels, tokenCounts, 'Top 10 Hits by Token Distribution');
+                    } else {
+                        showNoDataMessage('hitsByTokenChart', 'No Token data available.');
+                        if (hitsByTokenChart) hitsByTokenChart.destroy(); // 기존 차트가 있으면 파괴
+                    }
 
                 } catch (error) {
                     console.error('Error fetching dashboard data:', error);
@@ -296,7 +358,7 @@
             // --- Chart.js 렌더링 함수들 ---
             function renderPieChart(canvasId, labels, data, title) {
                 const ctx = document.getElementById(canvasId).getContext('2d');
-                if (userAgentsChart) userAgentsChart.destroy(); // 기존 차트가 있으면 파괴
+                if (userAgentsChart) userAgentsChart.destroy(); // 기존 차트가 있으면 파괴 (안전장치)
                 userAgentsChart = new Chart(ctx, {
                     type: 'pie',
                     data: {
@@ -343,7 +405,7 @@
 
             function renderLineChart(canvasId, labels, data, title) {
                 const ctx = document.getElementById(canvasId).getContext('2d');
-                if (hitsOverTimeChart) hitsOverTimeChart.destroy(); // 기존 차트 파괴
+                if (hitsOverTimeChart) hitsOverTimeChart.destroy(); // 기존 차트 파괴 (안전장치)
                 hitsOverTimeChart = new Chart(ctx, {
                     type: 'line',
                     data: {
@@ -425,7 +487,7 @@
 
             function renderBarChart(canvasId, labels, data, title) {
                 const ctx = document.getElementById(canvasId).getContext('2d');
-                if (hitsByTokenChart) hitsByTokenChart.destroy(); // 기존 차트 파괴
+                if (hitsByTokenChart) hitsByTokenChart.destroy(); // 기존 차트 파괴 (안전장치)
                 hitsByTokenChart = new Chart(ctx, {
                     type: 'bar',
                     data: {
