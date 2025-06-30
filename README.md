@@ -1,5 +1,6 @@
 # honeypot-dashboard
 honeypot-dashboard
+https://nonoyas.github.io/honeypot-dashboard/
 # Sales Report Demo
 
 [Download the Excel file](./sales_report_2024_Q2.xlsx)  
